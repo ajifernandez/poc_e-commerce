@@ -27,6 +27,8 @@ public interface ProductService {
      * @return the product (if any)
      */
     Optional<Product> getProductById(Long id);
+    
+    List<Product> getProductByName(String infix);
 
     /**
      * Creates a product.

@@ -38,6 +38,13 @@ public class ProductServiceImpl implements ProductService {
 	public Optional<Product> getProductById(Long id) {
 		return productRepository.findById(id);
 	}
+	
+	@PreAuthorize("hasRole('ROLE_USER')")
+	@Transactional
+	@Override
+	public List<Product> getProductByName(String infix) {
+		return productRepository.findByNameContaining(infix);
+	}
 
 	@PreAuthorize("hasRole('ROLE_USER')")
 	@Transactional

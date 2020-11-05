@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import poc.ecommerce.api.convert.ProductResourceAssembler;
 import poc.ecommerce.api.exception.NotFoundException;
 import poc.ecommerce.model.Product;
+import poc.ecommerce.model.response.ResponseHTTP;
 import poc.ecommerce.service.ProductService;
 
 /**
@@ -39,8 +40,13 @@ public class ProductController {
 	public ResponseEntity<?> retrieveAllProducts() {
 		// Getting all products in application...
 		final List<Product> products = productService.getAllProducts();
-
-		return ResponseEntity.ok(products);
+//		return ResponseEntity.ok(products);
+		
+		ResponseHTTP responseHTTP = new ResponseHTTP();
+		responseHTTP.setPath("/catalog");
+		responseHTTP.setStatus(HttpStatus.OK.value());
+		responseHTTP.setValue(products);
+		return new ResponseEntity<>(responseHTTP, HttpStatus.OK);
 	}
 
 	@RequestMapping(path = "/{id}", method = RequestMethod.GET)
@@ -49,6 +55,11 @@ public class ProductController {
 		final Product product = productService.getProductById(id).orElseThrow(() -> new NotFoundException("product"));
 
 		return ResponseEntity.ok(product);
+	}
+	
+	@RequestMapping(path = "/infix/{infix}", method = RequestMethod.GET)
+	public ResponseEntity<?> retrieveProductByName(@PathVariable String infix) {
+		return ResponseEntity.ok(productService.getProductByName(infix));
 	}
 
 	@RequestMapping(method = RequestMethod.POST)
