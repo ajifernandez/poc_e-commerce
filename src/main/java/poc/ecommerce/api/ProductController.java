@@ -7,6 +7,8 @@ import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import poc.ecommerce.api.convert.ProductResourceAssembler;
@@ -22,14 +25,12 @@ import poc.ecommerce.model.Product;
 import poc.ecommerce.model.response.ResponseHTTP;
 import poc.ecommerce.service.ProductService;
 
-/**
- * API Endpoint for product management
- *
- * @author dnardelli
- */
 @RestController
 @RequestMapping(path = "/catalog")
 public class ProductController {
+	
+	/** The Constant LOGGER. */
+	private static final Logger LOGGER = LoggerFactory.getLogger(ProductController.class);
 
 	@Autowired
 	private ProductService productService;
@@ -41,7 +42,7 @@ public class ProductController {
 		// Getting all products in application...
 		final List<Product> products = productService.getAllProducts();
 //		return ResponseEntity.ok(products);
-		
+
 		ResponseHTTP responseHTTP = new ResponseHTTP();
 		responseHTTP.setPath("/catalog");
 		responseHTTP.setStatus(HttpStatus.OK.value());
@@ -56,10 +57,11 @@ public class ProductController {
 
 		return ResponseEntity.ok(product);
 	}
-	
-	@RequestMapping(path = "/infix/{infix}", method = RequestMethod.GET)
-	public ResponseEntity<?> retrieveProductByName(@PathVariable String infix) {
-		return ResponseEntity.ok(productService.getProductByName(infix));
+
+	@RequestMapping(path = "/filter", method = RequestMethod.GET)
+	public ResponseEntity<?> retrieveProductByName(@RequestParam(required = false) String name, @RequestParam(required = false)Double price) {
+		LOGGER.info("Request - Get the services filtering by " + name + "and price " + price);
+		return ResponseEntity.ok(productService.getProductByName(name, price));
 	}
 
 	@RequestMapping(method = RequestMethod.POST)

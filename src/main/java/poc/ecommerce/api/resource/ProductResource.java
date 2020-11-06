@@ -1,11 +1,6 @@
 package poc.ecommerce.api.resource;
 import org.springframework.hateoas.ResourceSupport;
 
-/**
- * Spring HATEOAS-oriented DTO for {@see Product} entity
- *
- * @author dnardelli
- */
 public class ProductResource extends ResourceSupport {
 
     private final String name;
