@@ -41,14 +41,6 @@
                     <form:errors path="passwordConfirm"></form:errors>
                 </div>
             </spring:bind>
-            <spring:bind path="isAdmin">
-                <div class="form-group ${status.error ? 'has-error' : ''}">
-                	<label>Are you admin?</label>
-                    <input type="checkbox" path="isAdmin" class="form-control"></input>
-                    <form:errors path="isAdmin"></form:errors>
-                </div>
-            </spring:bind>
-
             <button class="btn btn-lg btn-primary btn-block" type="submit">Submit</button>
         </form:form>
 

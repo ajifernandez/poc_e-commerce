@@ -20,9 +20,6 @@ public class ResponseHTTP {
 	/** Message. */
 	private String message;
 
-	/** Path. */
-	private String path;
-
 	private Object value;
 
 	/**
@@ -87,27 +84,6 @@ public class ResponseHTTP {
 	 */
 	public void setMessage(String message) {
 		this.message = message;
-	}
-
-	/**
-	 * @return the path
-	 */
-	public String getPath() {
-		return path;
-	}
-
-	/**
-	 * @param path the path to set
-	 */
-	public void setPath(String path) {
-		this.path = path;
-	}
-
-	/**
-	 * @return the value
-	 */
-	public Object getValue() {
-		return value;
 	}
 
 	/**

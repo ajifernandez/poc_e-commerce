@@ -11,6 +11,12 @@ import poc.ecommerce.service.SecurityService;
 import poc.ecommerce.service.UserService;
 import poc.ecommerce.validator.UserValidator;
 
+/**
+ * User login/register controller
+ * 
+ * @author Agustín
+ *
+ */
 @Controller
 public class UserController {
 	@Autowired
@@ -40,6 +46,17 @@ public class UserController {
 		userService.save(userForm);
 
 		securityService.autoLogin(userForm.getUsername(), userForm.getPasswordConfirm());
+
+		return "redirect:/welcome";
+	}
+
+	@PostMapping("/login")
+	public String login(@ModelAttribute("userForm") User userForm, BindingResult bindingResult) {
+		if (bindingResult.hasErrors()) {
+			return "login";
+		}
+
+		securityService.autoLogin(userForm.getUsername(), userForm.getPassword());
 
 		return "redirect:/welcome";
 	}

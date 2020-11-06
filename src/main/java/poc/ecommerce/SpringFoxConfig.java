@@ -13,6 +13,12 @@ import springfox.documentation.spi.DocumentationType;
 import springfox.documentation.spring.web.plugins.Docket;
 import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
+/**
+ * Configuration class for SpringFox (swagger)
+ * 
+ * @author Agustín
+ *
+ */
 @Configuration
 @EnableSwagger2
 public class SpringFoxConfig {
@@ -24,9 +30,10 @@ public class SpringFoxConfig {
 	}
 
 	private ApiInfo getApiInfo() {
-		return new ApiInfo("E-commerce", "E-Commerce", "vX",
-				"TERMS OF SERVICE URL", new Contact("ajifernandez",
-						"...", "agustinjf87@gmail.com"),
-				"LICENSE", "LICENSE URL", Collections.emptyList());
+		return new ApiInfo("E-commerce", "E-Commerce", "0.0.1-SNAPSHOT",
+				"https://www.apache.org/licenses/LICENSE-2.0.txt",
+				new Contact("http://mhp-net.es/", "http://mhp-net.es/", "agustinjf87@gmail.com"),
+				"APACHE LICENSE, VERSION 2.0", "https://www.apache.org/licenses/LICENSE-2.0.txt",
+				Collections.emptyList());
 	}
 }

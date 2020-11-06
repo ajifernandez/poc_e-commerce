@@ -1,7 +1,6 @@
 package poc.ecommerce.api;
 
 import java.util.List;
-import java.util.Set;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
@@ -19,12 +18,21 @@ import org.springframework.web.bind.annotation.RestController;
 
 import poc.ecommerce.api.convert.ShoppingCartResourceAssembler;
 import poc.ecommerce.api.exception.NotFoundException;
+import poc.ecommerce.api.util.ResponseUtil;
 import poc.ecommerce.model.Product;
+import poc.ecommerce.model.Role;
 import poc.ecommerce.model.ShoppingCart;
 import poc.ecommerce.model.User;
 import poc.ecommerce.model.response.ResponseHTTP;
+import poc.ecommerce.service.SecurityService;
 import poc.ecommerce.service.ShoppingCartService;
 
+/**
+ * Controller to shopping cart
+ * 
+ * @author Agustín
+ *
+ */
 @RestController
 @RequestMapping(path = "/shoppingcart")
 public class ShoppingCartController {
@@ -35,14 +43,16 @@ public class ShoppingCartController {
 	@Autowired
 	private ShoppingCartService shoppingCartService;
 	@Autowired
+	private SecurityService securityService;
+	@Autowired
 	private ShoppingCartResourceAssembler shoppingcartResourceAssembler;
 
 	@RequestMapping(method = RequestMethod.GET)
 	public ResponseEntity<?> retrieveAllProducts() {
+		LOGGER.info("Request - Getting all shoppingCarts...");
 		final List<ShoppingCart> shoppingcart = shoppingCartService.getAllShoppingCarts();
 
 		ResponseHTTP responseHTTP = new ResponseHTTP();
-		responseHTTP.setPath("/shoppingcart");
 		responseHTTP.setStatus(HttpStatus.OK.value());
 		responseHTTP.setValue(shoppingcart);
 		return new ResponseEntity<>(responseHTTP, HttpStatus.OK);
@@ -50,35 +60,69 @@ public class ShoppingCartController {
 
 	@RequestMapping(path = "/{id}", method = RequestMethod.GET)
 	public ResponseEntity<?> retrieveProduct(@PathVariable Long id) {
-		final ShoppingCart shoppingcart = shoppingCartService.getShoppingCartById(id)
-				.orElseThrow(() -> new NotFoundException("product"));
-		return ResponseEntity.ok(shoppingcart);
+		LOGGER.info("Request - Get the shoppingcart by Id" + id);
+		ResponseEntity<?> response = null;
+		try {
+			final ShoppingCart shoppingcart = shoppingCartService.getShoppingCartById(id)
+					.orElseThrow(() -> new NotFoundException("shoppingcart"));
+			ResponseHTTP responseHTTP = new ResponseHTTP();
+			responseHTTP.setStatus(HttpStatus.OK.value());
+			responseHTTP.setValue(shoppingcart);
+			response = new ResponseEntity<>(responseHTTP, HttpStatus.OK);
+		} catch (NotFoundException e) {
+			response = ResponseUtil.createResponseNOT_FOUND(e);
+		}
+		return response;
 	}
 
 	@RequestMapping(method = RequestMethod.POST)
 	public ResponseEntity<?> createShoppingCart(@RequestBody ShoppingCartDto request) {
-		final ShoppingCart shoppingcart = shoppingCartService.createShoppingCart(request.getUser(), request.getProducts());
-		return ResponseEntity.status(HttpStatus.CREATED).body(shoppingcart);
+		LOGGER.info("Request - Creating the shoppingCart" + request);
+		final ShoppingCart shoppingcart = shoppingCartService.createShoppingCart(request.getUser(),
+				request.getProducts());
+		ResponseHTTP responseHTTP = new ResponseHTTP();
+		responseHTTP.setStatus(HttpStatus.CREATED.value());
+		responseHTTP.setValue(shoppingcart);
+		return new ResponseEntity<>(responseHTTP, HttpStatus.CREATED);
 	}
 
 	@RequestMapping(path = "/{id}", method = RequestMethod.PUT)
-	public ResponseEntity<?> updateProduct(@PathVariable Long id, @RequestBody @Valid ShoppingCartDto request) {
-		final ShoppingCart shoppingcart = shoppingCartService.getShoppingCartById(id)
-				.orElseThrow(() -> new NotFoundException("product"));
+	public ResponseEntity<?> updateShoppingCart(@PathVariable Long id, @RequestBody @Valid ShoppingCartDto request) {
+		LOGGER.info("Request - Updating the shoppingCart" + request);
+		ResponseEntity<?> response;
+		try {
+			final ShoppingCart shoppingcart = shoppingCartService.getShoppingCartById(id)
+					.orElseThrow(() -> new NotFoundException("product"));
+			shoppingCartService.updateShoppingCart(shoppingcart);
 
-		shoppingCartService.updateShoppingCart(shoppingcart);
-
-		return ResponseEntity.ok(shoppingcartResourceAssembler.toResource(shoppingcart));
+			ResponseHTTP responseHTTP = new ResponseHTTP();
+			responseHTTP.setStatus(HttpStatus.OK.value());
+			responseHTTP.setValue(shoppingcartResourceAssembler.toResource(shoppingcart));
+			response = new ResponseEntity<>(responseHTTP, HttpStatus.OK);
+		} catch (NotFoundException e) {
+			response = ResponseUtil.createResponseNOT_FOUND(e);
+		}
+		return response;
 	}
 
 	@RequestMapping(path = "/{id}", method = RequestMethod.DELETE)
 	public ResponseEntity<?> deleteShoppingCart(@PathVariable Long id) {
-		final ShoppingCart shoppingcart = shoppingCartService.getShoppingCartById(id)
-				.orElseThrow(() -> new NotFoundException("product"));
+		LOGGER.info("Request - deleting shoppingcart...");
+		ResponseEntity<?> response = null;
+		try {
+			final ShoppingCart shoppingcart = shoppingCartService.getShoppingCartById(id)
+					.orElseThrow(() -> new NotFoundException("product"));
 
-		shoppingCartService.deleteShoppingCart(shoppingcart);
+			shoppingCartService.deleteShoppingCart(shoppingcart);
+			ResponseHTTP responseHTTP = new ResponseHTTP();
+			responseHTTP.setStatus(HttpStatus.NO_CONTENT.value());
+			responseHTTP.setValue(shoppingcart);
+			response = new ResponseEntity<>(responseHTTP, HttpStatus.NO_CONTENT);
 
-		return ResponseEntity.noContent().build();
+		} catch (NotFoundException e) {
+			response = ResponseUtil.createResponseNOT_FOUND(e);
+		}
+		return response;
 	}
 
 	static class ShoppingCartDto {
