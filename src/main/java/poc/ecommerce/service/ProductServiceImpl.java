@@ -8,7 +8,6 @@ import java.util.Optional;
 import javax.transaction.Transactional;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 import poc.ecommerce.model.Product;
@@ -20,24 +19,21 @@ public class ProductServiceImpl implements ProductService {
 	@Autowired
 	private ProductRepository productRepository;
 
-	@PreAuthorize("hasRole('ROLE_USER')")
 	@Transactional
 	@Override
 	public List<Product> getAllProducts() {
 		return productRepository.findAll();
 	}
 
-	@PreAuthorize("hasRole('ROLE_USER')")
 	@Transactional
 	@Override
 	public Optional<Product> getProductById(Long id) {
 		return productRepository.findById(id);
 	}
 
-	@PreAuthorize("hasRole('ROLE_USER')")
 	@Transactional
 	@Override
-	public List<Product> getProductByName(String infix, Double price) {
+	public List<Product> getFilterProduct(String infix, Double price) {
 		List<Product> result = new ArrayList<>();
 		if(infix == null) {
 			result = productRepository.findAll();
@@ -55,7 +51,6 @@ public class ProductServiceImpl implements ProductService {
 		return result;
 	}
 
-	@PreAuthorize("hasRole('ROLE_USER')")
 	@Transactional
 	@Override
 	public Product createProduct(String name, String currency, double price) {
@@ -69,7 +64,6 @@ public class ProductServiceImpl implements ProductService {
 		return productRepository.save(product);
 	}
 
-	@PreAuthorize("hasRole('ROLE_ADMIN') or principal.id == #product.getUser().getId()")
 	@Transactional
 	@Override
 	public void updateProduct(Product product, String name, String currency, double price) {
@@ -81,7 +75,6 @@ public class ProductServiceImpl implements ProductService {
 		productRepository.save(product);
 	}
 
-	@PreAuthorize("hasRole('ROLE_ADMIN') or principal.id == #product.getUser().getId()")
 	@Transactional
 	@Override
 	public void deleteProduct(Product product) {

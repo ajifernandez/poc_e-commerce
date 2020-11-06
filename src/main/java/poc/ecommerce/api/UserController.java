@@ -4,8 +4,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
 
+import poc.ecommerce.model.Role;
 import poc.ecommerce.model.User;
 import poc.ecommerce.service.SecurityService;
 import poc.ecommerce.service.UserService;
@@ -42,7 +45,11 @@ public class UserController {
 		if (bindingResult.hasErrors()) {
 			return "registration";
 		}
-
+		if (userForm.getRole() != null && userForm.getRole().equals(Role.ROLE_ADMIN.name())) {
+			userForm.setRole(Role.ROLE_ADMIN.name());
+		} else {
+			userForm.setRole(Role.ROLE_USER.name());
+		}
 		userService.save(userForm);
 
 		securityService.autoLogin(userForm.getUsername(), userForm.getPasswordConfirm());
@@ -76,4 +83,5 @@ public class UserController {
 	public String welcome(Model model) {
 		return "welcome";
 	}
+
 }

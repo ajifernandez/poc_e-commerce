@@ -1,5 +1,11 @@
 package poc.ecommerce.api.exception;
 
+/**
+ * Excetpion when the entity is not found
+ * 
+ * @author Agustín
+ *
+ */
 public class NotFoundException extends RuntimeException {
 
 	/**

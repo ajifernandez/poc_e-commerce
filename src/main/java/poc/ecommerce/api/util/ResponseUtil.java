@@ -5,7 +5,14 @@ import org.springframework.http.ResponseEntity;
 
 import poc.ecommerce.api.exception.NotFoundException;
 import poc.ecommerce.model.response.ResponseHTTP;
+import poc.ecommerce.model.response.ResponseHTTPErrorEnum;
 
+/**
+ * Util class to create http responses
+ * 
+ * @author Agustín
+ *
+ */
 public class ResponseUtil {
 	/**
 	 * create the response for UNAUTHORIZED users
@@ -15,8 +22,8 @@ public class ResponseUtil {
 	public static ResponseEntity<?> createResponseUNAUTHORIZED() {
 		ResponseHTTP responseHTTP = new ResponseHTTP();
 		responseHTTP.setStatus(HttpStatus.UNAUTHORIZED.value());
-		responseHTTP.setMessage("UNAUTHORIZED");
-		responseHTTP.setError("UNAUTHORIZED");
+		responseHTTP.setMessage(ResponseHTTPErrorEnum.USER_UNAUTHORIZED.toString());
+		responseHTTP.setError(ResponseHTTPErrorEnum.USER_UNAUTHORIZED.toString());
 		ResponseEntity<?> response = new ResponseEntity<>(responseHTTP, HttpStatus.UNAUTHORIZED);
 		return response;
 	}

@@ -48,27 +48,38 @@ public class ShoppingCartController {
 	private ShoppingCartResourceAssembler shoppingcartResourceAssembler;
 
 	@RequestMapping(method = RequestMethod.GET)
-	public ResponseEntity<?> retrieveAllProducts() {
+	public ResponseEntity<?> retrieveAllShoppingCarts() {
 		LOGGER.info("Request - Getting all shoppingCarts...");
-		final List<ShoppingCart> shoppingcart = shoppingCartService.getAllShoppingCarts();
+		ResponseEntity<?> response;
+		if (securityService.checkPermissions(Role.ROLE_ADMIN.name())) {
+			final List<ShoppingCart> shoppingcart = shoppingCartService.getAllShoppingCarts();
 
-		ResponseHTTP responseHTTP = new ResponseHTTP();
-		responseHTTP.setStatus(HttpStatus.OK.value());
-		responseHTTP.setValue(shoppingcart);
-		return new ResponseEntity<>(responseHTTP, HttpStatus.OK);
+			ResponseHTTP responseHTTP = new ResponseHTTP();
+			responseHTTP.setStatus(HttpStatus.OK.value());
+			responseHTTP.setValue(shoppingcart);
+			return new ResponseEntity<>(responseHTTP, HttpStatus.OK);
+		} else {
+			response = ResponseUtil.createResponseUNAUTHORIZED();
+		}
+		return response;
 	}
 
 	@RequestMapping(path = "/{id}", method = RequestMethod.GET)
-	public ResponseEntity<?> retrieveProduct(@PathVariable Long id) {
+	public ResponseEntity<?> retrieveShoppingCart(@PathVariable Long id) {
 		LOGGER.info("Request - Get the shoppingcart by Id" + id);
 		ResponseEntity<?> response = null;
 		try {
 			final ShoppingCart shoppingcart = shoppingCartService.getShoppingCartById(id)
 					.orElseThrow(() -> new NotFoundException("shoppingcart"));
-			ResponseHTTP responseHTTP = new ResponseHTTP();
-			responseHTTP.setStatus(HttpStatus.OK.value());
-			responseHTTP.setValue(shoppingcart);
-			response = new ResponseEntity<>(responseHTTP, HttpStatus.OK);
+			if (securityService.checkPermissions(Role.ROLE_ADMIN.name())
+					|| securityService.findLoggedInUsername().equals(shoppingcart.getUser().getUsername())) {
+				ResponseHTTP responseHTTP = new ResponseHTTP();
+				responseHTTP.setStatus(HttpStatus.OK.value());
+				responseHTTP.setValue(shoppingcart);
+				response = new ResponseEntity<>(responseHTTP, HttpStatus.OK);
+			} else {
+				response = ResponseUtil.createResponseUNAUTHORIZED();
+			}
 		} catch (NotFoundException e) {
 			response = ResponseUtil.createResponseNOT_FOUND(e);
 		}
@@ -93,12 +104,17 @@ public class ShoppingCartController {
 		try {
 			final ShoppingCart shoppingcart = shoppingCartService.getShoppingCartById(id)
 					.orElseThrow(() -> new NotFoundException("product"));
-			shoppingCartService.updateShoppingCart(shoppingcart);
+			if (securityService.checkPermissions(Role.ROLE_ADMIN.name())
+					|| securityService.findLoggedInUsername().equals(shoppingcart.getUser().getUsername())) {
+				shoppingCartService.updateShoppingCart(shoppingcart);
 
-			ResponseHTTP responseHTTP = new ResponseHTTP();
-			responseHTTP.setStatus(HttpStatus.OK.value());
-			responseHTTP.setValue(shoppingcartResourceAssembler.toResource(shoppingcart));
-			response = new ResponseEntity<>(responseHTTP, HttpStatus.OK);
+				ResponseHTTP responseHTTP = new ResponseHTTP();
+				responseHTTP.setStatus(HttpStatus.OK.value());
+				responseHTTP.setValue(shoppingcartResourceAssembler.toResource(shoppingcart));
+				response = new ResponseEntity<>(responseHTTP, HttpStatus.OK);
+			} else {
+				response = ResponseUtil.createResponseUNAUTHORIZED();
+			}
 		} catch (NotFoundException e) {
 			response = ResponseUtil.createResponseNOT_FOUND(e);
 		}
@@ -112,13 +128,16 @@ public class ShoppingCartController {
 		try {
 			final ShoppingCart shoppingcart = shoppingCartService.getShoppingCartById(id)
 					.orElseThrow(() -> new NotFoundException("product"));
-
-			shoppingCartService.deleteShoppingCart(shoppingcart);
-			ResponseHTTP responseHTTP = new ResponseHTTP();
-			responseHTTP.setStatus(HttpStatus.NO_CONTENT.value());
-			responseHTTP.setValue(shoppingcart);
-			response = new ResponseEntity<>(responseHTTP, HttpStatus.NO_CONTENT);
-
+			if (securityService.checkPermissions(Role.ROLE_ADMIN.name())
+					|| securityService.findLoggedInUsername().equals(shoppingcart.getUser().getUsername())) {
+				shoppingCartService.deleteShoppingCart(shoppingcart);
+				ResponseHTTP responseHTTP = new ResponseHTTP();
+				responseHTTP.setStatus(HttpStatus.NO_CONTENT.value());
+				responseHTTP.setValue(shoppingcart);
+				response = new ResponseEntity<>(responseHTTP, HttpStatus.NO_CONTENT);
+			} else {
+				response = ResponseUtil.createResponseUNAUTHORIZED();
+			}
 		} catch (NotFoundException e) {
 			response = ResponseUtil.createResponseNOT_FOUND(e);
 		}

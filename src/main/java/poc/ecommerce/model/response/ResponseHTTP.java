@@ -93,4 +93,11 @@ public class ResponseHTTP {
 		this.value = value;
 	}
 
+	/**
+	 * @return the value
+	 */
+	public Object getValue() {
+		return value;
+	}
+
 }

@@ -51,13 +51,19 @@ public class ProductController {
 	@RequestMapping(method = RequestMethod.GET)
 	public ResponseEntity<?> retrieveAllProducts() {
 		LOGGER.info("Request - Getting all products");
+		ResponseEntity<?> response;
+		if (securityService.findLoggedInUsername() != null) {
+			final List<Product> products = productService.getAllProducts();
 
-		final List<Product> products = productService.getAllProducts();
+			ResponseHTTP responseHTTP = new ResponseHTTP();
+			responseHTTP.setStatus(HttpStatus.OK.value());
+			responseHTTP.setValue(products);
+			response = new ResponseEntity<>(responseHTTP, HttpStatus.OK);
+		} else {
 
-		ResponseHTTP responseHTTP = new ResponseHTTP();
-		responseHTTP.setStatus(HttpStatus.OK.value());
-		responseHTTP.setValue(products);
-		return new ResponseEntity<>(responseHTTP, HttpStatus.OK);
+			response = ResponseUtil.createResponseUNAUTHORIZED();
+		}
+		return response;
 	}
 
 	@RequestMapping(path = "/{id}", method = RequestMethod.GET)
@@ -69,7 +75,7 @@ public class ProductController {
 					.orElseThrow(() -> new NotFoundException("product"));
 			ResponseHTTP responseHTTP = new ResponseHTTP();
 			responseHTTP.setStatus(HttpStatus.OK.value());
-			responseHTTP.setValue(product);
+			responseHTTP.setValue(productResourceAssembler.toResource(product));
 			response = new ResponseEntity<>(responseHTTP, HttpStatus.OK);
 		} catch (NotFoundException e) {
 			response = ResponseUtil.createResponseNOT_FOUND(e);
@@ -81,7 +87,7 @@ public class ProductController {
 	public ResponseEntity<?> retrieveProductByName(@RequestParam(required = false) String name,
 			@RequestParam(required = false) Double price) {
 		LOGGER.info("Request - Get the services filtering by " + name + "and price " + price);
-		return ResponseEntity.ok(productService.getProductByName(name, price));
+		return ResponseEntity.ok(productService.getFilterProduct(name, price));
 	}
 
 	@RequestMapping(method = RequestMethod.POST)

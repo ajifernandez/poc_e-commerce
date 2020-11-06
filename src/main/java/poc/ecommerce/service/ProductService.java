@@ -8,10 +8,9 @@ import poc.ecommerce.model.Product;
 public interface ProductService {
 
 	/**
-	 * Gets all products present in the system. The result is paginated.
+	 * Gets all products present in the system
 	 *
-	 * @param page the page to fetch results from
-	 * @return the paginated results
+	 * @return all the products
 	 */
 	List<Product> getAllProducts();
 
@@ -23,12 +22,18 @@ public interface ProductService {
 	 */
 	Optional<Product> getProductById(Long id);
 
-	List<Product> getProductByName(String infix, Double price);
+	/**
+	 * Gets all products present in the system that match with the filter
+	 * 
+	 * @param infix the string contained in the product name
+	 * @param price maximum price of the product
+	 * @return the filtered products
+	 */
+	List<Product> getFilterProduct(String infix, Double price);
 
 	/**
-	 * Creates a product. If the currency is not 'EUR' then a Currency Exchange will
-	 * be performed.
-	 *
+	 * Creates a product. 
+	 * 
 	 * @param name     the name of the product
 	 * @param currency the currency of the product
 	 * @param price    the price of the product
@@ -37,8 +42,7 @@ public interface ProductService {
 	Product createProduct(String name, String currency, double price);
 
 	/**
-	 * Updates an existing product. If the currency is not 'EUR' then a Currency
-	 * Exchange will be performed.
+	 * Updates an existing product.
 	 *
 	 * @param product  the product to update
 	 * @param name     the new product name

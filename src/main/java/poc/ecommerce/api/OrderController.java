@@ -27,6 +27,7 @@ import poc.ecommerce.model.User;
 import poc.ecommerce.model.response.ResponseHTTP;
 import poc.ecommerce.service.OrderService;
 import poc.ecommerce.service.SecurityService;
+import poc.ecommerce.service.ShoppingCartService;
 
 /**
  * OrderController
@@ -45,6 +46,8 @@ public class OrderController {
 	private OrderService orderService;
 	@Autowired
 	private SecurityService securityService;
+	@Autowired
+	private ShoppingCartService shoppingCartService;
 	@Autowired
 	private OrderResourceAssembler orderResourceAssembler;
 
@@ -90,6 +93,10 @@ public class OrderController {
 		LOGGER.info("Request - Creating order: " + request);
 		final Order order = orderService.createOrder(request.getUser(), request.getShoppingcartId(),
 				request.getBillingInfo());
+
+		shoppingCartService
+				.deleteShoppingCart(shoppingCartService.getShoppingCartById(request.getShoppingcartId()).get());
+
 		ResponseHTTP responseHTTP = new ResponseHTTP();
 		responseHTTP.setStatus(HttpStatus.CREATED.value());
 		responseHTTP.setValue(order);

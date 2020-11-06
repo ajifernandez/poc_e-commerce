@@ -7,7 +7,6 @@ import java.util.Optional;
 import javax.transaction.Transactional;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 import poc.ecommerce.model.BillingInfo;
@@ -24,21 +23,18 @@ public class OrderServiceImpl implements OrderService {
 	@Autowired
 	private ShoppingCartRepository shoppingcartRepository;
 
-	@PreAuthorize("hasRole('ROLE_ADMIN')")
 	@Transactional
 	@Override
 	public List<Order> getAllOrders() {
 		return orderRepository.findAll();
 	}
 
-	@PreAuthorize("hasRole('ROLE_USER')")
 	@Transactional
 	@Override
 	public Optional<Order> getOrderById(Long id) {
 		return orderRepository.findById(id);
 	}
 
-	@PreAuthorize("hasRole('ROLE_USER')")
 	@Transactional
 	@Override
 	public Order createOrder(User user, Long shoppingcartId, BillingInfo billingInfo) {
@@ -53,14 +49,12 @@ public class OrderServiceImpl implements OrderService {
 		return orderRepository.save(order);
 	}
 
-	@PreAuthorize("hasRole('ROLE_ADMIN') or principal.id == #product.getUser().getId()")
 	@Transactional
 	@Override
 	public void updateOrder(Order order) {
 		orderRepository.save(order);
 	}
 
-	@PreAuthorize("hasRole('ROLE_ADMIN') or principal.id == #product.getUser().getId()")
 	@Transactional
 	@Override
 	public void deleteOrder(Order order) {
