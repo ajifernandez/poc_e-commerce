@@ -19,6 +19,13 @@ public class BillingInfo {
 	private String dates;
 
 	/**
+	 * 
+	 */
+	public BillingInfo() {
+		super();
+	}
+
+	/**
 	 * @param cardName
 	 * @param dates
 	 * @param cardNumber

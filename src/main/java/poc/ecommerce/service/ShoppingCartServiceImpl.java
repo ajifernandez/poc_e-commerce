@@ -37,8 +37,9 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
 		ShoppingCart shoppingcart = new ShoppingCart();
 		shoppingcart.setUser(user);
 		shoppingcart.setProducts(products);
-
-		return shoppingcartRepository.save(shoppingcart);
+		ShoppingCart result = shoppingcartRepository.save(shoppingcart);
+		shoppingcartRepository.flush();
+		return result;
 	}
 
 	@Transactional
