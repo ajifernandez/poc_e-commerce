@@ -106,6 +106,7 @@ public class ShoppingCartController {
 					.orElseThrow(() -> new NotFoundException("product"));
 			if (securityService.checkPermissions(Role.ROLE_ADMIN.name())
 					|| securityService.findLoggedInUsername().equals(shoppingcart.getUser().getUsername())) {
+				shoppingcart.setProducts(request.getProducts());
 				shoppingCartService.updateShoppingCart(shoppingcart);
 
 				ResponseHTTP responseHTTP = new ResponseHTTP();
