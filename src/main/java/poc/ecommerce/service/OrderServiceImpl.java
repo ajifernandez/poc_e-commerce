@@ -9,8 +9,10 @@ import javax.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import poc.ecommerce.model.BillingInfo;
+import poc.ecommerce.api.model.BillingInfoDto;
 import poc.ecommerce.model.Order;
+import poc.ecommerce.model.ProductsInProcess;
+import poc.ecommerce.model.ShoppingCart;
 import poc.ecommerce.model.User;
 import poc.ecommerce.repository.OrderRepository;
 import poc.ecommerce.repository.ShoppingCartRepository;
@@ -37,15 +39,20 @@ public class OrderServiceImpl implements OrderService {
 
 	@Transactional
 	@Override
-	public Order createOrder(User user, Long shoppingcartId, BillingInfo billingInfo) {
+	public Order createOrderAndClearShoppingCart(User user, Long shoppingcartId, BillingInfoDto billingInfo) {
 		Order order = new Order();
 		order.setUser(user);
-		order.setProducts(new ArrayList<>(shoppingcartRepository.findById(shoppingcartId).get().getProducts()));
+		order.setProducts(shoppingcartRepository.findById(shoppingcartId).get().getProducts());
 		order.setCardName(billingInfo.getCardName());
 		order.setCardNumber(billingInfo.getCardNumber());
 		order.setDates(billingInfo.getDates());
 		order.setStatus("CREATED");
 		order.setAdditionalInfo("");
+
+		ShoppingCart shoppingCart = shoppingcartRepository.findById(shoppingcartId).get();
+		shoppingCart.setProducts(new ArrayList<ProductsInProcess>());
+		shoppingcartRepository.save(shoppingcartRepository.findById(shoppingcartId).get());
+		
 		return orderRepository.save(order);
 	}
 

@@ -40,7 +40,9 @@ public class UserController {
 
 	@PostMapping("/registration")
 	public String registration(@ModelAttribute("userForm") User userForm, BindingResult bindingResult) {
-		userValidator.validate(userForm, bindingResult);
+		if (userValidator.supports(userForm.getClass())) {
+			userValidator.validate(userForm, bindingResult);
+		}
 
 		if (bindingResult.hasErrors()) {
 			return "registration";
@@ -66,6 +68,12 @@ public class UserController {
 		securityService.autoLogin(userForm.getUsername(), userForm.getPassword());
 
 		return "redirect:/welcome";
+	}
+
+	@PostMapping("/logout")
+	public String logout(@ModelAttribute("logoutForm") User userForm, BindingResult bindingResult) {
+		securityService.logout(userForm.getUsername());
+		return "redirect:/login";
 	}
 
 	@GetMapping("/login")

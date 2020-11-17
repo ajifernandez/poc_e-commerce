@@ -2,15 +2,15 @@ package poc.ecommerce.model;
 
 import java.util.List;
 
-import javax.persistence.CollectionTable;
+import javax.persistence.CascadeType;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.ManyToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 
 @Entity
 @Table(name = "_order")
@@ -27,8 +27,8 @@ public class Order {
 	private String dates;
 	private String cardNumber;
 
-	@ManyToMany
-	private List<Product> products;
+	@ManyToMany(fetch = FetchType.EAGER, cascade=CascadeType.ALL)
+	private List<ProductsInProcess> products;
 
 	private String status;
 	private String additionalInfo;
@@ -73,11 +73,17 @@ public class Order {
 		this.cardNumber = cardNumber;
 	}
 
-	public List<Product> getProducts() {
+	/**
+	 * @return the products
+	 */
+	public List<ProductsInProcess> getProducts() {
 		return products;
 	}
 
-	public void setProducts(List<Product> products) {
+	/**
+	 * @param products the products to set
+	 */
+	public void setProducts(List<ProductsInProcess> products) {
 		this.products = products;
 	}
 

@@ -3,7 +3,7 @@ package poc.ecommerce.service;
 import java.util.List;
 import java.util.Optional;
 
-import poc.ecommerce.model.BillingInfo;
+import poc.ecommerce.api.model.BillingInfoDto;
 import poc.ecommerce.model.Order;
 import poc.ecommerce.model.User;
 
@@ -13,7 +13,7 @@ public interface OrderService {
 
 	Optional<Order> getOrderById(Long id);
 
-	Order createOrder(User user, Long shoppingcartId, BillingInfo billingInfo);
+	Order createOrderAndClearShoppingCart(User user, Long shoppingcartId, BillingInfoDto billingInfo);
 
 	void updateOrder(Order order);
 

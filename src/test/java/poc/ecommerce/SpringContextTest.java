@@ -1,138 +1,316 @@
 package poc.ecommerce;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.Assert.assertThrows;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.apache.http.HttpStatus;
+import org.junit.Assert;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.validation.BeanPropertyBindingResult;
 
-import poc.ecommerce.model.BillingInfo;
-import poc.ecommerce.model.Order;
+import poc.ecommerce.api.OrderController;
+import poc.ecommerce.api.ProductController;
+import poc.ecommerce.api.ShoppingCartController;
+import poc.ecommerce.api.UserController;
+import poc.ecommerce.api.model.BillingInfoDto;
+import poc.ecommerce.api.model.OrderDto;
+import poc.ecommerce.api.model.ProductDto;
+import poc.ecommerce.api.model.ProductsInProcessDto;
+import poc.ecommerce.api.model.ShoppingCartDto;
 import poc.ecommerce.model.Product;
 import poc.ecommerce.model.Role;
-import poc.ecommerce.model.ShoppingCart;
 import poc.ecommerce.model.User;
-import poc.ecommerce.service.OrderService;
-import poc.ecommerce.service.ProductService;
-import poc.ecommerce.service.ShoppingCartService;
-import poc.ecommerce.service.UserService;
+import poc.ecommerce.model.response.ResponseHTTP;
 
-@RunWith(SpringRunner.class)
-@SpringBootTest(classes = WebApplication.class)
+@ActiveProfiles("test")
+@SpringBootTest(classes = WebApplication.class, webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
+@TestMethodOrder(OrderAnnotation.class)
 public class SpringContextTest {
 
-	private static final String CURRENCY = "EUR";
-	@Autowired
-	private UserService userService;
-	@Autowired
-	private ProductService productService;
-	@Autowired
-	private ShoppingCartService shoppingCartService;
-	@Autowired
-	private OrderService orderService;
+	private static final String USER_FORM = "userForm";
 
-	/**
-	 * Users
-	 */
-	private User user1;
-	private User user2;
-	private User user3; // administrator
+	@Autowired
+	private UserController userController;
+	@Autowired
+	private ProductController productController;
+	@Autowired
+	private ShoppingCartController shoppingCartController;
+	@Autowired
+	private OrderController orderController;
 
-	@Before
+	private static boolean launched;
+
+	@BeforeEach
 	public void prepareData() {
-		user1 = new User();
-		user1.setPassword("usuario1");
-		user1.setUsername("usuario1");
-		user1.setRole(Role.ROLE_USER.name());
-		userService.save(user1);
+		if (!launched) {
+			BeanPropertyBindingResult bindingResult1 = new BeanPropertyBindingResult(getNormalUser(), USER_FORM);
+			Assert.assertEquals("redirect:/welcome", userController.registration(getNormalUser(), bindingResult1));
 
-		user2 = new User();
-		user2.setPassword("usuario2");
-		user2.setUsername("usuario2");
-		user2.setRole(Role.ROLE_USER.name());
-		userService.save(user1);
+			BeanPropertyBindingResult bindingResult3 = new BeanPropertyBindingResult(getAdminUser(), USER_FORM);
+			Assert.assertEquals("redirect:/welcome", userController.registration(getAdminUser(), bindingResult3));
 
-		user3 = new User();
-		user3.setPassword("administrator");
-		user3.setUsername("administrator");
-		user3.setRole(Role.ROLE_ADMIN.name());
+			ProductDto product = new ProductDto();
+			product.setName("Product 1");
+			product.setPrice(10.5);
+			Assert.assertEquals(HttpStatus.SC_CREATED, productController.createProduct(product).getStatusCodeValue());
+
+			product = new ProductDto();
+			product.setName("Product 2");
+			product.setPrice(12.5);
+			Assert.assertEquals(HttpStatus.SC_CREATED, productController.createProduct(product).getStatusCodeValue());
+
+			product = new ProductDto();
+			product.setName("Product 3");
+			product.setPrice(13.5);
+			Assert.assertEquals(HttpStatus.SC_CREATED, productController.createProduct(product).getStatusCodeValue());
+
+			product = new ProductDto();
+			product.setName("Product 4");
+			product.setPrice(14.5);
+			Assert.assertEquals(HttpStatus.SC_CREATED, productController.createProduct(product).getStatusCodeValue());
+
+			Assert.assertEquals("redirect:/login", userController.logout(getAdminUser(), null));
+
+			launched = true;
+		}
+
+	}
+
+	private User getNormalUser() {
+		User user = new User();
+		user.setPassword("usuario1");
+		user.setPasswordConfirm("usuario1");
+		user.setUsername("usuario1");
+		user.setRole(Role.ROLE_USER.name());
+		return user;
+	}
+
+	private User getAdminUser() {
+		User user = new User();
+		user.setPassword("administrator");
+		user.setPasswordConfirm("administrator");
+		user.setUsername("administrator");
+		user.setRole(Role.ROLE_ADMIN.name());
+		return user;
 	}
 
 	@Test
-	public void testAll() {
-		testProducts();
-		testShoppingCart();
-		testOrderCheckout();
+	public void testRegisterValidationShortUserNamePassword() throws Exception {
+		User user = new User();
+		user.setPassword("short");
+		user.setPasswordConfirm("short");
+		user.setUsername("short");
+		BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(user, USER_FORM);
+		String registration = userController.registration(user, bindingResult);
+		Assert.assertEquals("registration", registration);
 	}
 
-	private void testProducts() {
-		List<Product> allProducts = productService.getAllProducts();
-		assertEquals(allProducts.size(), 0);
-		productService.createProduct("product1", CURRENCY, 10.5);
-		productService.createProduct("product2", CURRENCY, 11.5);
-		productService.createProduct("product3", CURRENCY, 12.5);
-		Product product = productService.createProduct("product4", CURRENCY, 13.5);
-		allProducts = productService.getAllProducts();
-		assertEquals(allProducts.size(), 4);
-
-		Optional<Product> productById = productService.getProductById(product.getId());
-		assertEquals(product.getId(), productById.get().getId());
-
-		productService.deleteProduct(product);
-		allProducts = productService.getAllProducts();
-		assertEquals(allProducts.size(), 3);
-
-		allProducts = productService.getFilterProduct("duc", null);
-		assertEquals(allProducts.size(), 3);
-		allProducts = productService.getFilterProduct("duc", 11.0);
-		assertEquals(allProducts.size(), 1);
+	@Test
+	public void testRegisterValidationLongUserNamePassword() throws Exception {
+		User user = new User();
+		user.setPassword("0123456789012345678901234567890123456789");
+		user.setPasswordConfirm("0123456789012345678901234567890123456789");
+		user.setUsername("0123456789012345678901234567890123456789");
+		BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(user, USER_FORM);
+		String registration = userController.registration(user, bindingResult);
+		Assert.assertEquals("registration", registration);
 	}
 
-	private void testShoppingCart() {
-		List<Product> allProducts = productService.getAllProducts();
-
-		List<Product> products = new ArrayList<>();
-		products.add(allProducts.get(0));
-		products.add(allProducts.get(1));
-		ShoppingCart createShoppingCart1 = shoppingCartService.createShoppingCart(user1, products);
-		assertNotNull(createShoppingCart1);
-
-		ShoppingCart shoppingCartById = shoppingCartService.getShoppingCartById(createShoppingCart1.getId()).get();
-		assertNotNull(shoppingCartById);
-
-		products = new ArrayList<>();
-		products.add(allProducts.get(0));
-		products.add(allProducts.get(1));
-		products.add(allProducts.get(2));
-		shoppingCartById.setProducts(products);
-		shoppingCartService.updateShoppingCart(shoppingCartById);
-		assertEquals(shoppingCartService.getShoppingCartById(createShoppingCart1.getId()).get().getProducts().size(),
-				3);
-
-		assertEquals(shoppingCartService.getAllShoppingCarts().size(), 1);
+	@Test
+	public void testRegisterValidationPasswords() throws Exception {
+		User user = new User();
+		user.setPassword("1234567890");
+		user.setPasswordConfirm("123456789");
+		user.setUsername("administrator");
+		BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(user, USER_FORM);
+		String registration = userController.registration(user, bindingResult);
+		Assert.assertEquals("registration", registration);
 	}
 
-	private void testOrderCheckout() {
-		BillingInfo billingInfo = new BillingInfo();
-		billingInfo.setCardName("USUARIO1");
-		billingInfo.setCardNumber("4539585460951520");
-		billingInfo.setDates("08/2020");
-		Order createOrder = orderService.createOrder(user1, 1L, billingInfo);
-		assertEquals(createOrder.getStatus(), "CREATED");
+	@Test
+	public void testRegisterValidationUserExists() throws Exception {
+		User user = new User();
+		user.setPassword("1234567890");
+		user.setPasswordConfirm("1234567");
+		user.setUsername("short");
+		BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(user, USER_FORM);
+		String registration = userController.registration(user, bindingResult);
+		Assert.assertEquals("registration", registration);
+	}
 
-		createOrder.setStatus("PROCESSED");
-		orderService.updateOrder(createOrder);
+	@Test
+	public void testLogin() throws Exception {
+		Assert.assertEquals("redirect:/welcome",
+				userController.login(getNormalUser(), new BeanPropertyBindingResult(getNormalUser(), USER_FORM)));
+		Assert.assertEquals("redirect:/login", userController.logout(getNormalUser(), null));
+	}
 
-		Optional<Order> orderById = orderService.getOrderById(createOrder.getId());
-		assertEquals(orderById.get().getStatus(), "PROCESSED");
+	@Test
+	public void testLoginValidation() throws Exception {
+		assertThrows(BadCredentialsException.class, () -> {
+			User adminUser = getNormalUser();
+			adminUser.setPassword("0123");
+			Assert.assertEquals("login",
+					userController.login(adminUser, new BeanPropertyBindingResult(adminUser, USER_FORM)));
+		});
+	}
+
+	@Test
+	public void testListProductsNotLogged() throws Exception {
+		Assert.assertEquals("redirect:/login", userController.logout(getAdminUser(), null));
+		assertThrows(AuthenticationCredentialsNotFoundException.class, () -> {
+			productController.retrieveAllProducts();
+		});
+	}
+
+	@SuppressWarnings("unchecked")
+	@Test
+	public void testListProducts() throws Exception {
+		Assert.assertEquals("redirect:/welcome",
+				userController.login(getNormalUser(), new BeanPropertyBindingResult(getNormalUser(), USER_FORM)));
+		ResponseEntity<?> retrieveAllProducts = productController.retrieveAllProducts();
+		Assert.assertEquals(HttpStatus.SC_OK, retrieveAllProducts.getStatusCodeValue());
+		Assert.assertEquals(4, ((List<ProductDto>) ((ResponseHTTP) retrieveAllProducts.getBody()).getValue()).size());
+	}
+
+	@Test
+	public void testGetProductById() throws Exception {
+		Assert.assertEquals("redirect:/welcome",
+				userController.login(getNormalUser(), new BeanPropertyBindingResult(getNormalUser(), USER_FORM)));
+		ResponseEntity<?> retrieveProduct = productController.retrieveProduct(1L);
+		Assert.assertEquals(HttpStatus.SC_OK, retrieveProduct.getStatusCodeValue());
+		Assert.assertEquals(10.5, ((Product) ((ResponseHTTP) retrieveProduct.getBody()).getValue()).getPrice(), 0);
+	}
+
+	@Test
+	public void testUpdateProduct() throws Exception {
+		Assert.assertEquals("redirect:/welcome",
+				userController.login(getAdminUser(), new BeanPropertyBindingResult(getAdminUser(), USER_FORM)));
+		ResponseEntity<?> retrieveProduct = productController.retrieveProduct(1L);
+		Product product = ((Product) ((ResponseHTTP) retrieveProduct.getBody()).getValue());
+		ProductDto pDto = new ProductDto();
+		pDto.setName("name updated");
+		pDto.setPrice(product.getPrice());
+		ResponseEntity<?> updateProduct = productController.updateProduct(product.getId(), pDto);
+		Assert.assertEquals(HttpStatus.SC_OK, updateProduct.getStatusCodeValue());
+		Assert.assertEquals("name updated", ((Product) ((ResponseHTTP) updateProduct.getBody()).getValue()).getName());
+	}
+
+	@Test
+	public void testUpdateProductNotFound() throws Exception {
+		Assert.assertEquals("redirect:/welcome",
+				userController.login(getAdminUser(), new BeanPropertyBindingResult(getAdminUser(), USER_FORM)));
+		ResponseEntity<?> retrieveProduct = productController.retrieveProduct(1L);
+		Product product = ((Product) ((ResponseHTTP) retrieveProduct.getBody()).getValue());
+		ProductDto pDto = new ProductDto();
+		pDto.setName("name updated");
+		pDto.setPrice(product.getPrice());
+		ResponseEntity<?> updateProduct = productController.updateProduct(-1L, pDto);
+		Assert.assertEquals(HttpStatus.SC_NOT_FOUND, updateProduct.getStatusCodeValue());
+	}
+
+	@Test
+	public void testGetProductByIdNotFound() throws Exception {
+		Assert.assertEquals("redirect:/welcome",
+				userController.login(getNormalUser(), new BeanPropertyBindingResult(getNormalUser(), USER_FORM)));
+		ResponseEntity<?> retrieveProduct = productController.retrieveProduct(-1L);
+		Assert.assertEquals(HttpStatus.SC_NOT_FOUND, retrieveProduct.getStatusCodeValue());
+	}
+
+	@Test
+	public void testDeleteProduct() throws Exception {
+		Assert.assertEquals("redirect:/welcome",
+				userController.login(getAdminUser(), new BeanPropertyBindingResult(getAdminUser(), USER_FORM)));
+		ResponseEntity<?> retrieveProduct = productController.deleteProduct(1L);
+		Assert.assertEquals(HttpStatus.SC_EXPECTATION_FAILED, retrieveProduct.getStatusCodeValue());
+	}
+
+	@Test
+	public void testDeleteProductNotFound() throws Exception {
+		Assert.assertEquals("redirect:/welcome",
+				userController.login(getAdminUser(), new BeanPropertyBindingResult(getAdminUser(), USER_FORM)));
+		ResponseEntity<?> deleteProduct = productController.deleteProduct(-1L);
+		Assert.assertEquals(HttpStatus.SC_NOT_FOUND, deleteProduct.getStatusCodeValue());
+	}
+
+	@SuppressWarnings("unchecked")
+	@Test
+	public void testFilterProducts() throws Exception {
+		Assert.assertEquals("redirect:/welcome",
+				userController.login(getNormalUser(), new BeanPropertyBindingResult(getNormalUser(), USER_FORM)));
+		ResponseEntity<?> findProducts = productController.retrieveProductByName("duc", null);
+		Assert.assertEquals(HttpStatus.SC_OK, findProducts.getStatusCodeValue());
+		Assert.assertNotNull(((List<Product>) ((ResponseHTTP) findProducts.getBody()).getValue()));
+
+		findProducts = productController.retrieveProductByName("duc", 11.0);
+		Assert.assertEquals(HttpStatus.SC_OK, findProducts.getStatusCodeValue());
+		Assert.assertNotNull(((List<Product>) ((ResponseHTTP) findProducts.getBody()).getValue()));
+	}
+
+	@SuppressWarnings("unchecked")
+	@Test
+	public void testFullProcess() throws Exception {
+		// Login as normal user
+		Assert.assertEquals("redirect:/welcome",
+				userController.login(getNormalUser(), new BeanPropertyBindingResult(getNormalUser(), USER_FORM)));
+		// Find and select products
+		ResponseEntity<?> retrieveAllProducts = productController.retrieveAllProducts();
+		ResponseEntity<?> retrieveShoppingCart = shoppingCartController
+				.retrieveShoppingCart(getNormalUser().getUsername());
+
+		ShoppingCartDto shoppingCartDto = (ShoppingCartDto) ((ResponseHTTP) retrieveShoppingCart.getBody()).getValue();
+		List<ProductsInProcessDto> products = new ArrayList<ProductsInProcessDto>();
+
+		List<ProductDto> productsList = (List<ProductDto>) ((ResponseHTTP) retrieveAllProducts.getBody()).getValue();
+		ProductsInProcessDto e = new ProductsInProcessDto();
+		e.setProduct(productsList.get(0));
+		e.setAmount(1);
+		products.add(e);
+		e = new ProductsInProcessDto();
+		e.setProduct(productsList.get(1));
+		e.setAmount(5);
+		products.add(e);
+		shoppingCartDto.setProducts(products);
+		// Update shoppingCart
+		shoppingCartController.updateShoppingCart(shoppingCartDto);
+
+		OrderDto orderDto = new OrderDto();
+		BillingInfoDto billingInfo = new BillingInfoDto();
+		billingInfo.setCardName("CARD NAME");
+		billingInfo.setCardNumber("CARD NUMBER");
+		billingInfo.setDates("DATES");
+		orderDto.setBillingInfo(billingInfo);
+		orderDto.setShoppingcartId(shoppingCartDto.getId());
+		orderDto.setUser(getNormalUser());
+
+		orderController.createOrder(orderDto);
+
+		Assert.assertEquals("redirect:/login", userController.logout(getNormalUser(), null));
+		
+		// Login as admin user
+		Assert.assertEquals("redirect:/welcome",
+				userController.login(getAdminUser(), new BeanPropertyBindingResult(getAdminUser(), USER_FORM)));
+		retrieveShoppingCart = shoppingCartController.retrieveShoppingCart(getNormalUser().getUsername());
+		shoppingCartDto = (ShoppingCartDto) ((ResponseHTTP) retrieveShoppingCart.getBody()).getValue();
+//		orderController.retrieveAllOrdersByUsername(getNormalUser().getUsername());
+		ResponseEntity<?> retrieveAllOrders = orderController.retrieveAllOrders();
+		List<OrderDto> orders = (List<OrderDto>) ((ResponseHTTP) retrieveAllOrders.getBody()).getValue();
+		orderController.checkoutOrder(orders.get(0).getId());
+
+		ResponseEntity<?> retrieveOrder = orderController.retrieveOrder(orders.get(0).getId());
+		OrderDto order = (OrderDto) ((ResponseHTTP) retrieveOrder.getBody()).getValue();
+		Assert.assertEquals("PROCESSED", order.getStatus());
 	}
 
 }

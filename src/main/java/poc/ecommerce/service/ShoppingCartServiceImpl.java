@@ -8,9 +8,7 @@ import javax.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import poc.ecommerce.model.Product;
 import poc.ecommerce.model.ShoppingCart;
-import poc.ecommerce.model.User;
 import poc.ecommerce.repository.ShoppingCartRepository;
 
 @Service
@@ -33,17 +31,6 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
 
 	@Transactional
 	@Override
-	public ShoppingCart createShoppingCart(User user, List<Product> products) {
-		ShoppingCart shoppingcart = new ShoppingCart();
-		shoppingcart.setUser(user);
-		shoppingcart.setProducts(products);
-		ShoppingCart result = shoppingcartRepository.save(shoppingcart);
-		shoppingcartRepository.flush();
-		return result;
-	}
-
-	@Transactional
-	@Override
 	public void updateShoppingCart(ShoppingCart shoppingcart) {
 		shoppingcartRepository.save(shoppingcart);
 	}
@@ -52,6 +39,18 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
 	@Override
 	public void deleteShoppingCart(ShoppingCart shoppingcart) {
 		shoppingcartRepository.delete(shoppingcart);
+	}
+
+	@Override
+	public ShoppingCart getShoppingCartByUsername(String findLoggedInUsername) {
+		ShoppingCart result = null;
+		for (ShoppingCart shoppingCart : shoppingcartRepository.findAll()) {
+			if(shoppingCart.getUser().getUsername().equals(findLoggedInUsername)) {
+				result = shoppingCart;
+			}
+				
+		}
+		return result;
 	}
 
 }

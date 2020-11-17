@@ -3,31 +3,32 @@ package poc.ecommerce.api;
 import java.util.List;
 
 import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
 
+import org.modelmapper.ModelMapper;
+import org.modelmapper.TypeToken;
+import org.modelmapper.config.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
-import poc.ecommerce.api.ShoppingCartController.ShoppingCartDto;
-import poc.ecommerce.api.convert.OrderResourceAssembler;
 import poc.ecommerce.api.exception.NotFoundException;
+import poc.ecommerce.api.model.OrderDto;
+import poc.ecommerce.api.model.ShoppingCartDto;
 import poc.ecommerce.api.util.ResponseUtil;
-import poc.ecommerce.model.BillingInfo;
 import poc.ecommerce.model.Order;
 import poc.ecommerce.model.Role;
-import poc.ecommerce.model.User;
 import poc.ecommerce.model.response.ResponseHTTP;
 import poc.ecommerce.service.OrderService;
 import poc.ecommerce.service.SecurityService;
-import poc.ecommerce.service.ShoppingCartService;
+import poc.ecommerce.service.UserService;
 
 /**
  * OrderController
@@ -36,6 +37,7 @@ import poc.ecommerce.service.ShoppingCartService;
  *
  */
 @RestController
+@PreAuthorize("isFullyAuthenticated()")
 @RequestMapping(path = "/order")
 public class OrderController {
 
@@ -45,27 +47,26 @@ public class OrderController {
 	@Autowired
 	private OrderService orderService;
 	@Autowired
+	private UserService userService;
+	@Autowired
 	private SecurityService securityService;
-	@Autowired
-	private ShoppingCartService shoppingCartService;
-	@Autowired
-	private OrderResourceAssembler orderResourceAssembler;
 
 	@RequestMapping(method = RequestMethod.GET)
+	@PreAuthorize("hasRole('ROLE_ADMIN')")
 	public ResponseEntity<?> retrieveAllOrders() {
 		LOGGER.info("Request - Getting all orders");
-		ResponseEntity<?> response = null;
-		if (securityService.checkPermissions(Role.ROLE_ADMIN.name())) {
-			final List<Order> orders = orderService.getAllOrders();
+		final List<Order> orders = orderService.getAllOrders();
+		ModelMapper modelMapper = new ModelMapper();
+		modelMapper.getConfiguration().setFieldMatchingEnabled(true)
+				.setFieldAccessLevel(Configuration.AccessLevel.PRIVATE);
 
-			ResponseHTTP responseHTTP = new ResponseHTTP();
-			responseHTTP.setStatus(HttpStatus.OK.value());
-			responseHTTP.setValue(orders);
-			return new ResponseEntity<>(responseHTTP, HttpStatus.OK);
-		} else {
-			response = ResponseUtil.createResponseUNAUTHORIZED();
-		}
-		return response;
+		List<OrderDto> ordersDto = modelMapper.map(orders, new TypeToken<List<OrderDto>>() {
+		}.getType());
+
+		ResponseHTTP responseHTTP = new ResponseHTTP();
+		responseHTTP.setStatus(HttpStatus.OK.value());
+		responseHTTP.setValue(ordersDto);
+		return new ResponseEntity<>(responseHTTP, HttpStatus.OK);
 	}
 
 	@RequestMapping(path = "/{id}", method = RequestMethod.GET)
@@ -74,28 +75,31 @@ public class OrderController {
 		ResponseEntity<?> response = null;
 		try {
 			final Order order = orderService.getOrderById(id).orElseThrow(() -> new NotFoundException("order"));
-			if (order != null && order.getUser().getUsername().equals(securityService.findLoggedInUsername())) {
+			if (order != null && (order.getUser().getUsername().equals(securityService.findLoggedInUsername())
+					|| securityService.checkPermissions(Role.ROLE_ADMIN.name()))) {
+				ModelMapper modelMapper = new ModelMapper();
+				OrderDto orderDTO = modelMapper.map(order, OrderDto.class);
+				
 				ResponseHTTP responseHTTP = new ResponseHTTP();
 				responseHTTP.setStatus(HttpStatus.OK.value());
-				responseHTTP.setValue(order);
+				responseHTTP.setValue(orderDTO);
 				response = new ResponseEntity<>(responseHTTP, HttpStatus.OK);
 			} else {
-				response = ResponseUtil.createResponseUNAUTHORIZED();
+				response = ResponseUtil.createResponseUnauthorized();
 			}
 		} catch (NotFoundException e) {
-			response = ResponseUtil.createResponseNOT_FOUND(e);
+			response = ResponseUtil.createResponseNotFound(e);
 		}
 		return response;
 	}
 
 	@RequestMapping(method = RequestMethod.POST)
-	public ResponseEntity<?> createOrder(@RequestBody OrderDto request) {
-		LOGGER.info("Request - Creating order: " + request);
-		final Order order = orderService.createOrder(request.getUser(), request.getShoppingcartId(),
-				request.getBillingInfo());
+	public ResponseEntity<?> createOrder(@RequestBody OrderDto orderDto) {
+		LOGGER.info("Request - Creating order: " + orderDto);
 
-		shoppingCartService
-				.deleteShoppingCart(shoppingCartService.getShoppingCartById(request.getShoppingcartId()).get());
+		final Order order = orderService.createOrderAndClearShoppingCart(
+				userService.findByUsername(orderDto.getUser().getUsername()), orderDto.getShoppingcartId(),
+				orderDto.getBillingInfo());
 
 		ResponseHTTP responseHTTP = new ResponseHTTP();
 		responseHTTP.setStatus(HttpStatus.CREATED.value());
@@ -115,13 +119,13 @@ public class OrderController {
 
 				ResponseHTTP responseHTTP = new ResponseHTTP();
 				responseHTTP.setStatus(HttpStatus.OK.value());
-				responseHTTP.setValue(orderResourceAssembler.toResource(order));
+				responseHTTP.setValue(order);
 				response = new ResponseEntity<>(responseHTTP, HttpStatus.OK);
 			} catch (NotFoundException e) {
-				response = ResponseUtil.createResponseNOT_FOUND(e);
+				response = ResponseUtil.createResponseNotFound(e);
 			}
 		} else {
-			response = ResponseUtil.createResponseUNAUTHORIZED();
+			response = ResponseUtil.createResponseUnauthorized();
 		}
 		return response;
 	}
@@ -137,13 +141,13 @@ public class OrderController {
 
 				ResponseHTTP responseHTTP = new ResponseHTTP();
 				responseHTTP.setStatus(HttpStatus.OK.value());
-				responseHTTP.setValue(orderResourceAssembler.toResource(order));
+				responseHTTP.setValue(order);
 				response = new ResponseEntity<>(responseHTTP, HttpStatus.OK);
 			} catch (NotFoundException e) {
-				response = ResponseUtil.createResponseNOT_FOUND(e);
+				response = ResponseUtil.createResponseNotFound(e);
 			}
 		} else {
-			response = ResponseUtil.createResponseUNAUTHORIZED();
+			response = ResponseUtil.createResponseUnauthorized();
 		}
 		return response;
 	}
@@ -160,47 +164,15 @@ public class OrderController {
 
 				ResponseHTTP responseHTTP = new ResponseHTTP();
 				responseHTTP.setStatus(HttpStatus.OK.value());
-				responseHTTP.setValue(orderResourceAssembler.toResource(order));
+				responseHTTP.setValue(order);
 				response = new ResponseEntity<>(responseHTTP, HttpStatus.OK);
 			} catch (NotFoundException e) {
-				response = ResponseUtil.createResponseNOT_FOUND(e);
+				response = ResponseUtil.createResponseNotFound(e);
 			}
 		} else {
-			response = ResponseUtil.createResponseUNAUTHORIZED();
+			response = ResponseUtil.createResponseUnauthorized();
 		}
 		return response;
-	}
-
-	static class OrderDto {
-		@NotNull(message = "user is required")
-		private User user;
-		private BillingInfo billingInfo;
-		private Long shoppingcartId;
-
-		public User getUser() {
-			return user;
-		}
-
-		public void setUser(User user) {
-			this.user = user;
-		}
-
-		public Long getShoppingcartId() {
-			return shoppingcartId;
-		}
-
-		public void setShoppingcartId(Long shoppingcartId) {
-			this.shoppingcartId = shoppingcartId;
-		}
-
-		public BillingInfo getBillingInfo() {
-			return billingInfo;
-		}
-
-		public void setBillingInfo(BillingInfo billingInfo) {
-			this.billingInfo = billingInfo;
-		}
-
 	}
 
 }

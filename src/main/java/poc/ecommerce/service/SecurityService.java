@@ -23,4 +23,6 @@ public interface SecurityService {
 	 * @return has the permission or not
 	 */
 	boolean checkPermissions(String permission);
+
+	void logout(String username);
 }

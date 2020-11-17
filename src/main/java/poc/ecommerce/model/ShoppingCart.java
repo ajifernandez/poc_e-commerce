@@ -23,8 +23,8 @@ public class ShoppingCart {
 	@OneToOne
 	private User user;
 
-	@ManyToMany(fetch = FetchType.EAGER)
-	private List<Product> products;
+	@ManyToMany(fetch = FetchType.EAGER, cascade=CascadeType.ALL)
+	private List<ProductsInProcess> products;
 
 	public Long getId() {
 		return id;
@@ -42,11 +42,17 @@ public class ShoppingCart {
 		this.user = user;
 	}
 
-	public List<Product> getProducts() {
+	/**
+	 * @return the products
+	 */
+	public List<ProductsInProcess> getProducts() {
 		return products;
 	}
 
-	public void setProducts(List<Product> products) {
+	/**
+	 * @param products the products to set
+	 */
+	public void setProducts(List<ProductsInProcess> products) {
 		this.products = products;
 	}
 
