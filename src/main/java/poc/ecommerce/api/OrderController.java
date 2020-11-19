@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import poc.ecommerce.api.exception.NotFoundException;
 import poc.ecommerce.api.model.OrderDto;
+import poc.ecommerce.api.model.ProductDto;
 import poc.ecommerce.api.model.ShoppingCartDto;
 import poc.ecommerce.api.util.ResponseUtil;
 import poc.ecommerce.model.Order;
@@ -69,6 +70,26 @@ public class OrderController {
 		return new ResponseEntity<>(responseHTTP, HttpStatus.OK);
 	}
 
+	@RequestMapping(path = "/{username}", method = RequestMethod.GET)
+	public ResponseEntity<?> retrieveOrders(@PathVariable String username) {
+		LOGGER.info("Request - Getting order by username: " + username);
+		ResponseEntity<?> response = null;
+		final List<Order> orders = orderService.getOrdersByUsername(username);
+		if (orders != null && (username.equals(securityService.findLoggedInUsername())
+				|| securityService.checkPermissions(Role.ROLE_ADMIN.name()))) {
+			ModelMapper modelMapper = new ModelMapper();
+			List<ProductDto> productsDto = modelMapper.map(orders, new TypeToken<List<OrderDto>>() {
+			}.getType());
+			ResponseHTTP responseHTTP = new ResponseHTTP();
+			responseHTTP.setStatus(HttpStatus.OK.value());
+			responseHTTP.setValue(productsDto);
+			response = new ResponseEntity<>(responseHTTP, HttpStatus.OK);
+		} else {
+			response = ResponseUtil.createResponseUnauthorized();
+		}
+		return response;
+	}
+
 	@RequestMapping(path = "/{id}", method = RequestMethod.GET)
 	public ResponseEntity<?> retrieveOrder(@PathVariable Long id) {
 		LOGGER.info("Request - Getting order by id: " + id);
@@ -79,7 +100,7 @@ public class OrderController {
 					|| securityService.checkPermissions(Role.ROLE_ADMIN.name()))) {
 				ModelMapper modelMapper = new ModelMapper();
 				OrderDto orderDTO = modelMapper.map(order, OrderDto.class);
-				
+
 				ResponseHTTP responseHTTP = new ResponseHTTP();
 				responseHTTP.setStatus(HttpStatus.OK.value());
 				responseHTTP.setValue(orderDTO);
@@ -108,24 +129,21 @@ public class OrderController {
 	}
 
 	@RequestMapping(path = "/checkout/{id}", method = RequestMethod.POST)
+	@PreAuthorize("hasRole('ROLE_ADMIN')")
 	public ResponseEntity<?> checkoutOrder(@PathVariable Long id) {
 		ResponseEntity<?> response;
 		LOGGER.info("Request - CheckinOut an order...");
-		if (securityService.checkPermissions(Role.ROLE_ADMIN.name())) {
-			try {
-				final Order order = orderService.getOrderById(id).orElseThrow(() -> new NotFoundException("order"));
-				order.setStatus("PROCESSED");
-				orderService.updateOrder(order);
+		try {
+			final Order order = orderService.getOrderById(id).orElseThrow(() -> new NotFoundException("order"));
+			order.setStatus("PROCESSED");
+			orderService.updateOrder(order);
 
-				ResponseHTTP responseHTTP = new ResponseHTTP();
-				responseHTTP.setStatus(HttpStatus.OK.value());
-				responseHTTP.setValue(order);
-				response = new ResponseEntity<>(responseHTTP, HttpStatus.OK);
-			} catch (NotFoundException e) {
-				response = ResponseUtil.createResponseNotFound(e);
-			}
-		} else {
-			response = ResponseUtil.createResponseUnauthorized();
+			ResponseHTTP responseHTTP = new ResponseHTTP();
+			responseHTTP.setStatus(HttpStatus.OK.value());
+			responseHTTP.setValue(order);
+			response = new ResponseEntity<>(responseHTTP, HttpStatus.OK);
+		} catch (NotFoundException e) {
+			response = ResponseUtil.createResponseNotFound(e);
 		}
 		return response;
 	}
@@ -134,20 +152,22 @@ public class OrderController {
 	public ResponseEntity<?> updateOrder(@PathVariable Long id, @RequestBody @Valid ShoppingCartDto request) {
 		ResponseEntity<?> response;
 		LOGGER.info("Request - CheckinOut an order...");
-		if (securityService.checkPermissions(Role.ROLE_ADMIN.name())) {
-			try {
-				final Order order = orderService.getOrderById(id).orElseThrow(() -> new NotFoundException("order"));
+
+		try {
+			final Order order = orderService.getOrderById(id).orElseThrow(() -> new NotFoundException("order"));
+			if (order != null && (order.getUser().getUsername().equals(securityService.findLoggedInUsername())
+					|| securityService.checkPermissions(Role.ROLE_ADMIN.name()))) {
 				orderService.updateOrder(order);
 
 				ResponseHTTP responseHTTP = new ResponseHTTP();
 				responseHTTP.setStatus(HttpStatus.OK.value());
 				responseHTTP.setValue(order);
 				response = new ResponseEntity<>(responseHTTP, HttpStatus.OK);
-			} catch (NotFoundException e) {
-				response = ResponseUtil.createResponseNotFound(e);
+			} else {
+				response = ResponseUtil.createResponseUnauthorized();
 			}
-		} else {
-			response = ResponseUtil.createResponseUnauthorized();
+		} catch (NotFoundException e) {
+			response = ResponseUtil.createResponseNotFound(e);
 		}
 		return response;
 	}
@@ -156,9 +176,10 @@ public class OrderController {
 	public ResponseEntity<?> cancelOrder(@PathVariable Long id) {
 		ResponseEntity<?> response;
 		LOGGER.info("Request - CheckinOut an order...");
-		if (securityService.checkPermissions(Role.ROLE_ADMIN.name())) {
-			try {
-				final Order order = orderService.getOrderById(id).orElseThrow(() -> new NotFoundException("order"));
+		try {
+			final Order order = orderService.getOrderById(id).orElseThrow(() -> new NotFoundException("order"));
+			if (order != null && (order.getUser().getUsername().equals(securityService.findLoggedInUsername())
+					|| securityService.checkPermissions(Role.ROLE_ADMIN.name()))) {
 				order.setStatus("CANCELLED");
 				orderService.updateOrder(order);
 
@@ -166,11 +187,11 @@ public class OrderController {
 				responseHTTP.setStatus(HttpStatus.OK.value());
 				responseHTTP.setValue(order);
 				response = new ResponseEntity<>(responseHTTP, HttpStatus.OK);
-			} catch (NotFoundException e) {
-				response = ResponseUtil.createResponseNotFound(e);
+			} else {
+				response = ResponseUtil.createResponseUnauthorized();
 			}
-		} else {
-			response = ResponseUtil.createResponseUnauthorized();
+		} catch (NotFoundException e) {
+			response = ResponseUtil.createResponseNotFound(e);
 		}
 		return response;
 	}

@@ -7,6 +7,8 @@ import java.util.List;
 
 import org.apache.http.HttpStatus;
 import org.junit.Assert;
+//import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Test;
@@ -14,6 +16,7 @@ import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.test.context.ActiveProfiles;
@@ -32,6 +35,9 @@ import poc.ecommerce.model.Product;
 import poc.ecommerce.model.Role;
 import poc.ecommerce.model.User;
 import poc.ecommerce.model.response.ResponseHTTP;
+import poc.ecommerce.repository.OrderRepository;
+import poc.ecommerce.repository.ProductRepository;
+import poc.ecommerce.repository.ShoppingCartRepository;
 
 @ActiveProfiles("test")
 @SpringBootTest(classes = WebApplication.class, webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
@@ -40,6 +46,9 @@ public class SpringContextTest {
 
 	private static final String USER_FORM = "userForm";
 
+	/**
+	 * Controllers
+	 */
 	@Autowired
 	private UserController userController;
 	@Autowired
@@ -49,49 +58,74 @@ public class SpringContextTest {
 	@Autowired
 	private OrderController orderController;
 
+	/**
+	 * Repositorys
+	 */
+	@Autowired
+	private ProductRepository productRepository;
+	@Autowired
+	private OrderRepository orderRepository;
+	@Autowired
+	private ShoppingCartRepository shoppingCartRepository;
+
 	private static boolean launched;
 
+	@AfterEach
+	public void clearData() {
+		orderRepository.deleteAll();
+//		shoppingCartRepository.clearAll();
+		productRepository.deleteAll();
+	}
+
 	@BeforeEach
-	public void prepareData() {
+	public void insertUsersData() {
 		if (!launched) {
-			BeanPropertyBindingResult bindingResult1 = new BeanPropertyBindingResult(getNormalUser(), USER_FORM);
-			Assert.assertEquals("redirect:/welcome", userController.registration(getNormalUser(), bindingResult1));
+			BeanPropertyBindingResult bindingResult1 = new BeanPropertyBindingResult(getNormalUser(1), USER_FORM);
+			Assert.assertEquals("redirect:/welcome", userController.registration(getNormalUser(1), bindingResult1));
+
+			BeanPropertyBindingResult bindingResult2 = new BeanPropertyBindingResult(getNormalUser(2), USER_FORM);
+			Assert.assertEquals("redirect:/welcome", userController.registration(getNormalUser(2), bindingResult2));
 
 			BeanPropertyBindingResult bindingResult3 = new BeanPropertyBindingResult(getAdminUser(), USER_FORM);
 			Assert.assertEquals("redirect:/welcome", userController.registration(getAdminUser(), bindingResult3));
 
-			ProductDto product = new ProductDto();
-			product.setName("Product 1");
-			product.setPrice(10.5);
-			Assert.assertEquals(HttpStatus.SC_CREATED, productController.createProduct(product).getStatusCodeValue());
-
-			product = new ProductDto();
-			product.setName("Product 2");
-			product.setPrice(12.5);
-			Assert.assertEquals(HttpStatus.SC_CREATED, productController.createProduct(product).getStatusCodeValue());
-
-			product = new ProductDto();
-			product.setName("Product 3");
-			product.setPrice(13.5);
-			Assert.assertEquals(HttpStatus.SC_CREATED, productController.createProduct(product).getStatusCodeValue());
-
-			product = new ProductDto();
-			product.setName("Product 4");
-			product.setPrice(14.5);
-			Assert.assertEquals(HttpStatus.SC_CREATED, productController.createProduct(product).getStatusCodeValue());
-
-			Assert.assertEquals("redirect:/login", userController.logout(getAdminUser(), null));
-
 			launched = true;
 		}
+	}
+
+	@BeforeEach
+	public void prepareData() {
+		Assert.assertEquals("redirect:/welcome",
+				userController.login(getAdminUser(), new BeanPropertyBindingResult(getAdminUser(), USER_FORM)));
+		ProductDto product = new ProductDto();
+		product.setName("Product 1");
+		product.setPrice(10.5);
+		Assert.assertEquals(HttpStatus.SC_CREATED, productController.createProduct(product).getStatusCodeValue());
+
+		product = new ProductDto();
+		product.setName("Product 2");
+		product.setPrice(12.5);
+		Assert.assertEquals(HttpStatus.SC_CREATED, productController.createProduct(product).getStatusCodeValue());
+
+		product = new ProductDto();
+		product.setName("Product 3");
+		product.setPrice(13.5);
+		Assert.assertEquals(HttpStatus.SC_CREATED, productController.createProduct(product).getStatusCodeValue());
+
+		product = new ProductDto();
+		product.setName("Product 4");
+		product.setPrice(14.5);
+		Assert.assertEquals(HttpStatus.SC_CREATED, productController.createProduct(product).getStatusCodeValue());
+
+		Assert.assertEquals("redirect:/login", userController.logout(getAdminUser(), null));
 
 	}
 
-	private User getNormalUser() {
+	private User getNormalUser(Integer i) {
 		User user = new User();
-		user.setPassword("usuario1");
-		user.setPasswordConfirm("usuario1");
-		user.setUsername("usuario1");
+		user.setPassword("usuario" + i);
+		user.setPasswordConfirm("usuario" + i);
+		user.setUsername("usuario" + i);
 		user.setRole(Role.ROLE_USER.name());
 		return user;
 	}
@@ -152,14 +186,14 @@ public class SpringContextTest {
 	@Test
 	public void testLogin() throws Exception {
 		Assert.assertEquals("redirect:/welcome",
-				userController.login(getNormalUser(), new BeanPropertyBindingResult(getNormalUser(), USER_FORM)));
-		Assert.assertEquals("redirect:/login", userController.logout(getNormalUser(), null));
+				userController.login(getNormalUser(1), new BeanPropertyBindingResult(getNormalUser(1), USER_FORM)));
+		Assert.assertEquals("redirect:/login", userController.logout(getNormalUser(1), null));
 	}
 
 	@Test
 	public void testLoginValidation() throws Exception {
 		assertThrows(BadCredentialsException.class, () -> {
-			User adminUser = getNormalUser();
+			User adminUser = getNormalUser(1);
 			adminUser.setPassword("0123");
 			Assert.assertEquals("login",
 					userController.login(adminUser, new BeanPropertyBindingResult(adminUser, USER_FORM)));
@@ -178,7 +212,7 @@ public class SpringContextTest {
 	@Test
 	public void testListProducts() throws Exception {
 		Assert.assertEquals("redirect:/welcome",
-				userController.login(getNormalUser(), new BeanPropertyBindingResult(getNormalUser(), USER_FORM)));
+				userController.login(getNormalUser(1), new BeanPropertyBindingResult(getNormalUser(1), USER_FORM)));
 		ResponseEntity<?> retrieveAllProducts = productController.retrieveAllProducts();
 		Assert.assertEquals(HttpStatus.SC_OK, retrieveAllProducts.getStatusCodeValue());
 		Assert.assertEquals(4, ((List<ProductDto>) ((ResponseHTTP) retrieveAllProducts.getBody()).getValue()).size());
@@ -187,8 +221,11 @@ public class SpringContextTest {
 	@Test
 	public void testGetProductById() throws Exception {
 		Assert.assertEquals("redirect:/welcome",
-				userController.login(getNormalUser(), new BeanPropertyBindingResult(getNormalUser(), USER_FORM)));
-		ResponseEntity<?> retrieveProduct = productController.retrieveProduct(1L);
+				userController.login(getNormalUser(1), new BeanPropertyBindingResult(getNormalUser(1), USER_FORM)));
+		ResponseEntity<?> retrieveAllProducts = productController.retrieveAllProducts();
+		List<ProductDto> productList = ((List<ProductDto>) ((ResponseHTTP) retrieveAllProducts.getBody()).getValue());
+
+		ResponseEntity<?> retrieveProduct = productController.retrieveProduct(productList.get(0).getId());
 		Assert.assertEquals(HttpStatus.SC_OK, retrieveProduct.getStatusCodeValue());
 		Assert.assertEquals(10.5, ((Product) ((ResponseHTTP) retrieveProduct.getBody()).getValue()).getPrice(), 0);
 	}
@@ -197,7 +234,10 @@ public class SpringContextTest {
 	public void testUpdateProduct() throws Exception {
 		Assert.assertEquals("redirect:/welcome",
 				userController.login(getAdminUser(), new BeanPropertyBindingResult(getAdminUser(), USER_FORM)));
-		ResponseEntity<?> retrieveProduct = productController.retrieveProduct(1L);
+		ResponseEntity<?> retrieveAllProducts = productController.retrieveAllProducts();
+		List<ProductDto> productList = ((List<ProductDto>) ((ResponseHTTP) retrieveAllProducts.getBody()).getValue());
+
+		ResponseEntity<?> retrieveProduct = productController.retrieveProduct(productList.get(0).getId());
 		Product product = ((Product) ((ResponseHTTP) retrieveProduct.getBody()).getValue());
 		ProductDto pDto = new ProductDto();
 		pDto.setName("name updated");
@@ -211,11 +251,14 @@ public class SpringContextTest {
 	public void testUpdateProductNotFound() throws Exception {
 		Assert.assertEquals("redirect:/welcome",
 				userController.login(getAdminUser(), new BeanPropertyBindingResult(getAdminUser(), USER_FORM)));
+		ResponseEntity<?> retrieveAllProducts = productController.retrieveAllProducts();
+		List<ProductDto> productList = ((List<ProductDto>) ((ResponseHTTP) retrieveAllProducts.getBody()).getValue());
+
 		ResponseEntity<?> retrieveProduct = productController.retrieveProduct(1L);
 		Product product = ((Product) ((ResponseHTTP) retrieveProduct.getBody()).getValue());
 		ProductDto pDto = new ProductDto();
 		pDto.setName("name updated");
-		pDto.setPrice(product.getPrice());
+		pDto.setPrice(productList.get(0).getPrice());
 		ResponseEntity<?> updateProduct = productController.updateProduct(-1L, pDto);
 		Assert.assertEquals(HttpStatus.SC_NOT_FOUND, updateProduct.getStatusCodeValue());
 	}
@@ -223,7 +266,7 @@ public class SpringContextTest {
 	@Test
 	public void testGetProductByIdNotFound() throws Exception {
 		Assert.assertEquals("redirect:/welcome",
-				userController.login(getNormalUser(), new BeanPropertyBindingResult(getNormalUser(), USER_FORM)));
+				userController.login(getNormalUser(1), new BeanPropertyBindingResult(getNormalUser(1), USER_FORM)));
 		ResponseEntity<?> retrieveProduct = productController.retrieveProduct(-1L);
 		Assert.assertEquals(HttpStatus.SC_NOT_FOUND, retrieveProduct.getStatusCodeValue());
 	}
@@ -232,8 +275,10 @@ public class SpringContextTest {
 	public void testDeleteProduct() throws Exception {
 		Assert.assertEquals("redirect:/welcome",
 				userController.login(getAdminUser(), new BeanPropertyBindingResult(getAdminUser(), USER_FORM)));
-		ResponseEntity<?> retrieveProduct = productController.deleteProduct(1L);
-		Assert.assertEquals(HttpStatus.SC_EXPECTATION_FAILED, retrieveProduct.getStatusCodeValue());
+		ResponseEntity<?> retrieveAllProducts = productController.retrieveAllProducts();
+		List<ProductDto> productList = ((List<ProductDto>) ((ResponseHTTP) retrieveAllProducts.getBody()).getValue());
+		ResponseEntity<?> retrieveProduct = productController.deleteProduct(productList.get(0).getId());
+		Assert.assertEquals(HttpStatus.SC_NO_CONTENT, retrieveProduct.getStatusCodeValue());
 	}
 
 	@Test
@@ -248,7 +293,7 @@ public class SpringContextTest {
 	@Test
 	public void testFilterProducts() throws Exception {
 		Assert.assertEquals("redirect:/welcome",
-				userController.login(getNormalUser(), new BeanPropertyBindingResult(getNormalUser(), USER_FORM)));
+				userController.login(getNormalUser(1), new BeanPropertyBindingResult(getNormalUser(1), USER_FORM)));
 		ResponseEntity<?> findProducts = productController.retrieveProductByName("duc", null);
 		Assert.assertEquals(HttpStatus.SC_OK, findProducts.getStatusCodeValue());
 		Assert.assertNotNull(((List<Product>) ((ResponseHTTP) findProducts.getBody()).getValue()));
@@ -258,16 +303,15 @@ public class SpringContextTest {
 		Assert.assertNotNull(((List<Product>) ((ResponseHTTP) findProducts.getBody()).getValue()));
 	}
 
-	@SuppressWarnings("unchecked")
 	@Test
-	public void testFullProcess() throws Exception {
+	public void testOrderNotUser() {
 		// Login as normal user
 		Assert.assertEquals("redirect:/welcome",
-				userController.login(getNormalUser(), new BeanPropertyBindingResult(getNormalUser(), USER_FORM)));
+				userController.login(getNormalUser(1), new BeanPropertyBindingResult(getNormalUser(1), USER_FORM)));
 		// Find and select products
 		ResponseEntity<?> retrieveAllProducts = productController.retrieveAllProducts();
 		ResponseEntity<?> retrieveShoppingCart = shoppingCartController
-				.retrieveShoppingCart(getNormalUser().getUsername());
+				.retrieveShoppingCart(getNormalUser(1).getUsername());
 
 		ShoppingCartDto shoppingCartDto = (ShoppingCartDto) ((ResponseHTTP) retrieveShoppingCart.getBody()).getValue();
 		List<ProductsInProcessDto> products = new ArrayList<ProductsInProcessDto>();
@@ -292,18 +336,68 @@ public class SpringContextTest {
 		billingInfo.setDates("DATES");
 		orderDto.setBillingInfo(billingInfo);
 		orderDto.setShoppingcartId(shoppingCartDto.getId());
-		orderDto.setUser(getNormalUser());
+		orderDto.setUser(getNormalUser(1));
+
+		orderController.createOrder(orderDto);
+		ResponseEntity<?> retrieveOrders = orderController.retrieveOrders(getNormalUser(1).getUsername());
+		List<OrderDto> order = (List<OrderDto>) ((ResponseHTTP) retrieveOrders.getBody()).getValue();
+		userController.logout(getNormalUser(1), null);
+
+		userController.login(getNormalUser(2), new BeanPropertyBindingResult(getNormalUser(2), USER_FORM));
+
+		assertThrows(AccessDeniedException.class, () -> {
+			// do whatever you want to do here
+			ResponseEntity<?> checkoutOrder = orderController.checkoutOrder(order.get(0).getId());
+		});
+
+	}
+
+	@SuppressWarnings("unchecked")
+	@Test
+	public void testFullProcess() throws Exception {
+		// Login as normal user
+		Assert.assertEquals("redirect:/welcome",
+				userController.login(getNormalUser(1), new BeanPropertyBindingResult(getNormalUser(1), USER_FORM)));
+		// Find and select products
+		ResponseEntity<?> retrieveAllProducts = productController.retrieveAllProducts();
+		ResponseEntity<?> retrieveShoppingCart = shoppingCartController
+				.retrieveShoppingCart(getNormalUser(1).getUsername());
+
+		ShoppingCartDto shoppingCartDto = (ShoppingCartDto) ((ResponseHTTP) retrieveShoppingCart.getBody()).getValue();
+		List<ProductsInProcessDto> products = new ArrayList<ProductsInProcessDto>();
+
+		List<ProductDto> productsList = (List<ProductDto>) ((ResponseHTTP) retrieveAllProducts.getBody()).getValue();
+		ProductsInProcessDto e = new ProductsInProcessDto();
+		e.setProduct(productsList.get(0));
+		e.setAmount(1);
+		products.add(e);
+		e = new ProductsInProcessDto();
+		e.setProduct(productsList.get(1));
+		e.setAmount(5);
+		products.add(e);
+		shoppingCartDto.setProducts(products);
+		// Update shoppingCart
+		shoppingCartController.updateShoppingCart(shoppingCartDto);
+
+		OrderDto orderDto = new OrderDto();
+		BillingInfoDto billingInfo = new BillingInfoDto();
+		billingInfo.setCardName("CARD NAME");
+		billingInfo.setCardNumber("CARD NUMBER");
+		billingInfo.setDates("DATES");
+		orderDto.setBillingInfo(billingInfo);
+		orderDto.setShoppingcartId(shoppingCartDto.getId());
+		orderDto.setUser(getNormalUser(1));
 
 		orderController.createOrder(orderDto);
 
-		Assert.assertEquals("redirect:/login", userController.logout(getNormalUser(), null));
-		
+		Assert.assertEquals("redirect:/login", userController.logout(getNormalUser(1), null));
+
 		// Login as admin user
 		Assert.assertEquals("redirect:/welcome",
 				userController.login(getAdminUser(), new BeanPropertyBindingResult(getAdminUser(), USER_FORM)));
-		retrieveShoppingCart = shoppingCartController.retrieveShoppingCart(getNormalUser().getUsername());
+		retrieveShoppingCart = shoppingCartController.retrieveShoppingCart(getNormalUser(1).getUsername());
 		shoppingCartDto = (ShoppingCartDto) ((ResponseHTTP) retrieveShoppingCart.getBody()).getValue();
-//		orderController.retrieveAllOrdersByUsername(getNormalUser().getUsername());
+//		orderController.retrieveAllOrdersByUsername(getNormalUser(1).getUsername());
 		ResponseEntity<?> retrieveAllOrders = orderController.retrieveAllOrders();
 		List<OrderDto> orders = (List<OrderDto>) ((ResponseHTTP) retrieveAllOrders.getBody()).getValue();
 		orderController.checkoutOrder(orders.get(0).getId());

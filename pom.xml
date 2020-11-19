@@ -4,7 +4,7 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>com.hellokoding.springboot</groupId>
+	<groupId>es.ajifernandez.ecommerce</groupId>
 	<artifactId>springboot-registration-login</artifactId>
 	<version>1.0-SNAPSHOT</version>
 
@@ -126,7 +126,6 @@
 		<dependency>
 			<groupId>io.rest-assured</groupId>
 			<artifactId>rest-assured</artifactId>
-			<version>3.0.6</version>
 			<scope>test</scope>
 		</dependency>
 

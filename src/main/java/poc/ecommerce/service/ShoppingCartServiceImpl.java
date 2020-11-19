@@ -1,6 +1,5 @@
 package poc.ecommerce.service;
 
-import java.util.List;
 import java.util.Optional;
 
 import javax.transaction.Transactional;
@@ -19,12 +18,6 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
 
 	@Transactional
 	@Override
-	public List<ShoppingCart> getAllShoppingCarts() {
-		return shoppingcartRepository.findAll();
-	}
-
-	@Transactional
-	@Override
 	public Optional<ShoppingCart> getShoppingCartById(Long id) {
 		return shoppingcartRepository.findById(id);
 	}
@@ -35,20 +28,14 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
 		shoppingcartRepository.save(shoppingcart);
 	}
 
-	@Transactional
 	@Override
-	public void deleteShoppingCart(ShoppingCart shoppingcart) {
-		shoppingcartRepository.delete(shoppingcart);
-	}
-
-	@Override
-	public ShoppingCart getShoppingCartByUsername(String findLoggedInUsername) {
+	public ShoppingCart getShoppingCartByUsername(String username) {
 		ShoppingCart result = null;
 		for (ShoppingCart shoppingCart : shoppingcartRepository.findAll()) {
-			if(shoppingCart.getUser().getUsername().equals(findLoggedInUsername)) {
+			if (shoppingCart.getUser().getUsername().equals(username)) {
 				result = shoppingCart;
 			}
-				
+
 		}
 		return result;
 	}

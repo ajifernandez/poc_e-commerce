@@ -4,7 +4,6 @@ import java.util.List;
 
 import javax.validation.constraints.NotNull;
 
-import poc.ecommerce.model.BillingInfo;
 import poc.ecommerce.model.User;
 
 public class OrderDto {

@@ -1,6 +1,5 @@
 package poc.ecommerce.api;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.validation.Valid;

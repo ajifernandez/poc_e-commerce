@@ -43,23 +43,6 @@ public class ShoppingCartController {
 	@Autowired
 	private SecurityService securityService;
 
-//	@RequestMapping(method = RequestMethod.GET)
-//	public ResponseEntity<?> retrieveAllShoppingCarts() {
-//		LOGGER.info("Request - Getting all shoppingCarts...");
-//		ResponseEntity<?> response;
-//		if (securityService.checkPermissions(Role.ROLE_ADMIN.name())) {
-//			final List<ShoppingCart> shoppingcart = shoppingCartService.getAllShoppingCarts();
-//
-//			ResponseHTTP responseHTTP = new ResponseHTTP();
-//			responseHTTP.setStatus(HttpStatus.OK.value());
-//			responseHTTP.setValue(shoppingcart);
-//			return new ResponseEntity<>(responseHTTP, HttpStatus.OK);
-//		} else {
-//			response = ResponseUtil.createResponseUnauthorized();
-//		}
-//		return response;
-//	}
-
 	@RequestMapping(path = "/{username}", method = RequestMethod.GET)
 	public ResponseEntity<?> retrieveShoppingCart(@PathVariable String username) {
 		LOGGER.info("Request - Get the shoppingcart by username" + username);
@@ -118,30 +101,6 @@ public class ShoppingCartController {
 				responseHTTP.setStatus(HttpStatus.OK.value());
 				responseHTTP.setValue(shoppingcart);
 				response = new ResponseEntity<>(responseHTTP, HttpStatus.OK);
-			} else {
-				response = ResponseUtil.createResponseUnauthorized();
-			}
-		} catch (NotFoundException e) {
-			response = ResponseUtil.createResponseNotFound(e);
-		}
-		return response;
-	}
-
-	@RequestMapping(path = "/{id}", method = RequestMethod.DELETE)
-	@PreAuthorize("hasRole('ROLE_ADMIN')")
-	public ResponseEntity<?> deleteShoppingCart(@PathVariable Long id) {
-		LOGGER.info("Request - deleting shoppingcart...");
-		ResponseEntity<?> response = null;
-		try {
-			final ShoppingCart shoppingcart = shoppingCartService.getShoppingCartById(id)
-					.orElseThrow(() -> new NotFoundException("product"));
-			if (securityService.checkPermissions(Role.ROLE_ADMIN.name())
-					|| securityService.findLoggedInUsername().equals(shoppingcart.getUser().getUsername())) {
-				shoppingCartService.deleteShoppingCart(shoppingcart);
-				ResponseHTTP responseHTTP = new ResponseHTTP();
-				responseHTTP.setStatus(HttpStatus.NO_CONTENT.value());
-				responseHTTP.setValue(shoppingcart);
-				response = new ResponseEntity<>(responseHTTP, HttpStatus.NO_CONTENT);
 			} else {
 				response = ResponseUtil.createResponseUnauthorized();
 			}

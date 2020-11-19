@@ -68,4 +68,15 @@ public class OrderServiceImpl implements OrderService {
 		orderRepository.delete(order);
 	}
 
+	@Override
+	public List<Order> getOrdersByUsername(String username) {
+		List<Order> result = new ArrayList<Order>();
+		for (Order order : orderRepository.findAll()) {
+			if (order.getUser().getUsername().equals(username)) {
+				result.add(order);
+			}
+		}
+		return result;
+	}
+
 }
